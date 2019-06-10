@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+
+<div id="video-div" style="text-align: center;">
+    <video autoplay style="border: 1px solid #ccc;  height: 480px; width: 480px;"></video><br>
+    <button class="capture-button">Start Scan</button>
+</div>
+
+<div style="text-align: center">
+    <img id="frame" src=""/>
+</div>
+
+<span id='username' style="display: none"> </span>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+<script>
+    const captureFramesButton = document.querySelector('.capture-button');
+    const img = document.querySelector('#frame');
+    const canvas = document.createElement('canvas');
+    const videoDiv = document.querySelector('#video-div');
+    var frame;
+
+    const constraints = {
+        video: { width: { exact: 480 }, height: { exact: 480 } }
+    };
+    const video = document.querySelector('video');
+
+    var localStream;
+    navigator.mediaDevices.getUserMedia(constraints).
+        then((stream) => {
+        video.srcObject = stream;
+            // keep a reference to the stream to stop it later
+            localStream = stream;
+        });
+
+    captureFramesButton.onclick = startCapture;
+    
+    function startCapture() {
+        var interval_id = setInterval(function(){
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            // Hide video and show captured frame
+            //videoDiv.style.display = "none";
+            //img.style.display = 'none';
+            //img.src = frame = canvas.toDataURL('image/jpg', 1);
+            frame = canvas.toDataURL('image/jpg', 1);
+
+            $.ajax({
+                type: "POST",
+                url: "http://127.0.0.1:5000/",
+                data: encodeURIComponent(frame),
+                processData: false,
+                success: function (response) {
+                    if (response.status == 'success'){
+                        var user_span = document.getElementById('username');
+                        user_span.style.display = null;
+                        user_span.innerHTML = response.username;
+                        clearInterval(interval_id);
+
+                        videoDiv.style.display = "none";
+                        img.style.display = null;
+                        img.src = canvas.toDataURL('image/jpg', 1);
+                        // Stop the webcam
+                        localStream.getVideoTracks()[0].stop();
+                    }
+                    // else{
+                    //     if(response.status == 'error_1'){
+                    //         //alert('No face detected. Please try again !')
+                    //         if(!alert('No face detected. Please try again !')){window.location.reload();}
+                    //     }
+                    //     if(response.status == 'error_2'){
+                    //         //alert('Multiple faces detected. Please try again !')
+                    //         if(!alert('Multiple faces detected. Please try again !')){window.location.reload();}
+                    //     }
+                    //     if(response.status == 'error_3'){
+                    //         //alert('User not found. Please try again !')
+                    //         if(!alert('User not found. Please try again !')){window.location.reload();}
+                    //     }
+                    // }
+                },
+                error: function (data) {
+                    alert('There was an error in processing!');
+                }
+            });
+        }, 500)
+    };
+</script>
+
+</html>
